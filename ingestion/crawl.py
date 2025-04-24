@@ -49,18 +49,60 @@ def search_for_artist(token, artist_name):
     
     return json_result[0]
 
-def get_songs_by_artist(token, artist_id):
-    url = f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?country=US"
+def get_top_tracks_for_artists(token, artist_ids):
     headers = get_auth_header(token)
-    result = get(url, headers=headers)
-    json_result = json.loads(result.content)["tracks"]
-    return json_result
+    track_data = []
 
+    for artist_id in artist_ids:
+        url = f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks?country=US"
+        res = get(url, headers=headers)
+        tracks = json.loads(res.content).get("tracks", [])
+        track_data.extend(tracks)
+    return track_data
 
-token = get_token()
-result = search_for_artist(token,"ACDC")
-artist_id = result["id"]
-songs = get_songs_by_artist(token, artist_id)
+TOP_US_ARTISTS = [
+    "Drake", "Taylor Swift", "Morgan Wallen", "SZA", "The Weeknd",
+    "Bad Bunny", "Metro Boomin", "Doja Cat", "Luke Combs", "Olivia Rodrigo"
+]
 
-for idx, song in enumerate(songs):
-    print(f"{idx +1}.{song['name']}")
+def get_top_artists_us(token):
+    headers = get_auth_header(token)
+    url = "https://api.spotify.com/v1/search"
+    artist_data = []
+
+    for name in TOP_US_ARTISTS:
+        query = f"?q={name}&type=artist&limit=1"
+        res = get(url + query, headers=headers)
+        items = json.loads(res.content).get("artists", {}).get("items", [])
+        if items:
+            artist_data.append(items[0])
+    return artist_data
+
+#  Add a function to save results to JSON
+def save_to_local_json(data, filename="data/raw_artists_tracks.json"):
+    # Get the parent directory of the current file's directory
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    full_path = os.path.join(base_dir, filename)
+
+    # Make sure the directory exists
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+    with open(full_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+# Orchestrate the flow
+def main():
+    token = get_token()
+    top_artists = get_top_artists_us(token)
+    artist_ids = [artist["id"] for artist in top_artists]
+    top_tracks = get_top_tracks_for_artists(token, artist_ids)
+    
+    combined = {
+        "top_artists": top_artists,
+        "top_tracks": top_tracks
+    }
+
+    save_to_local_json(combined, filename="data/raw_artists_tracks.json")
+
+if __name__ == "__main__":
+    main()
