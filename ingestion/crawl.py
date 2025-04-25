@@ -1,7 +1,7 @@
 from dotenv import load_dotenv   #For loading environment variables from a .env file
 import os   # OS-level operations (paths, env vars)
 import base64   # For encoding credentials
-from requests import post, get   To make HTTP requests
+from requests import post, get   #To make HTTP requests
 import json    # For working with JSON data
 
 # Loadd environment variables from .env.
@@ -103,18 +103,18 @@ def save_to_local_json(data, filename="data/raw_artists_tracks.json"):
 
 # Main function to control the script workflow
 def main():
-    token = get_token()   # Authenticate and get token
-    top_artists = get_top_artists_us(token)    # Get metadata for top US artists
-    artist_ids = [artist["id"] for artist in top_artists]   # Extract artist IDs
-    top_tracks = get_top_tracks_for_artists(token, artist_ids)  # Get top tracks for each artist
-    
-    # Combine both datasets into one dictionary
-    combined = {
+    token = get_token()
+    top_artists = get_top_artists_us(token)
+    artist_ids = [artist["id"] for artist in top_artists]
+    top_tracks = get_top_tracks_for_artists(token, artist_ids)
+
+    return {
         "top_artists": top_artists,
         "top_tracks": top_tracks
     }
 
-    save_to_local_json(combined, filename="data/raw_artists_tracks.json")
+if __name__ == "__main__":
+    main()
 
 # Run the main function when the script is executed directly
 if __name__ == "__main__":
