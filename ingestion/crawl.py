@@ -1,24 +1,25 @@
+from dotenv import load_dotenv   #For loading environment variables from a .env file
+import os   # OS-level operations (paths, env vars)
+import base64   # For encoding credentials
+from requests import post, get   To make HTTP requests
+import json    # For working with JSON data
 
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
-from dotenv import load_dotenv
-import os
-import base64
-from requests import post, get
-import json
-
-# take environment variables from .env.
+# Loadd environment variables from .env.
 load_dotenv()
 
+# Retrieve Spotify API credentials from environment variables
 client_id = os.getenv("client_id")
 client_secret = os.getenv("client_secret")
 
-# get authorizatio token
+
+# Function to retrieve an access token from Spotify API
 def get_token():
+    # Prepare credentials for encoding
     auth_string = client_id + ":" + client_secret
     auth_bytes = auth_string.encode("utf-8")
     auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
 
+    # Make POST request to get token
     url = "https://accounts.spotify.com/api/token"
     headers = {
         "Authorization": "Basic " + auth_base64,
@@ -30,11 +31,13 @@ def get_token():
     token = json_result['access_token']
     return token
 
+
+# Function to create an Authorization header using the token
 def get_auth_header(token):
     return{"Authorization": "Bearer "+ token}
 
 
-# Write a function to allow searching artist and get the artist's top tracks
+# Search Spotify for an artist by name
 def search_for_artist(token, artist_name):
     url = "https://api.spotify.com/v1/search"
     headers = get_auth_header(token)
@@ -43,12 +46,16 @@ def search_for_artist(token, artist_name):
     query_url = url + query
     result = get(query_url, headers=headers)
     json_result = json.loads(result.content)["artists"]["items"]
+
+    # If no results found, return None
     if len(json_result) == 0:
         print("No artist with this name exists...")
         return None
     
+    # Return the first matching artist's metadata
     return json_result[0]
 
+# Given a list of artist IDs, fetch their top tracks
 def get_top_tracks_for_artists(token, artist_ids):
     headers = get_auth_header(token)
     track_data = []
@@ -60,11 +67,14 @@ def get_top_tracks_for_artists(token, artist_ids):
         track_data.extend(tracks)
     return track_data
 
+# Hardcoded list of top US artist names to query
 TOP_US_ARTISTS = [
     "Drake", "Taylor Swift", "Morgan Wallen", "SZA", "The Weeknd",
     "Bad Bunny", "Metro Boomin", "Doja Cat", "Luke Combs", "Olivia Rodrigo"
 ]
 
+
+# Query Spotify to fetch metadata for the top artists
 def get_top_artists_us(token):
     headers = get_auth_header(token)
     url = "https://api.spotify.com/v1/search"
@@ -75,28 +85,30 @@ def get_top_artists_us(token):
         res = get(url + query, headers=headers)
         items = json.loads(res.content).get("artists", {}).get("items", [])
         if items:
-            artist_data.append(items[0])
+            artist_data.append(items[0])    # Add first match to list
     return artist_data
 
-#  Add a function to save results to JSON
+# Save JSON data to a file in the /data directory
 def save_to_local_json(data, filename="data/raw_artists_tracks.json"):
-    # Get the parent directory of the current file's directory
+    # Resolve the full path to the data directory (same level as ingestion folder)
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     full_path = os.path.join(base_dir, filename)
 
     # Make sure the directory exists
     os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
+    # Write the data to the specified JSON file
     with open(full_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-# Orchestrate the flow
+# Main function to control the script workflow
 def main():
-    token = get_token()
-    top_artists = get_top_artists_us(token)
-    artist_ids = [artist["id"] for artist in top_artists]
-    top_tracks = get_top_tracks_for_artists(token, artist_ids)
+    token = get_token()   # Authenticate and get token
+    top_artists = get_top_artists_us(token)    # Get metadata for top US artists
+    artist_ids = [artist["id"] for artist in top_artists]   # Extract artist IDs
+    top_tracks = get_top_tracks_for_artists(token, artist_ids)  # Get top tracks for each artist
     
+    # Combine both datasets into one dictionary
     combined = {
         "top_artists": top_artists,
         "top_tracks": top_tracks
@@ -104,5 +116,6 @@ def main():
 
     save_to_local_json(combined, filename="data/raw_artists_tracks.json")
 
+# Run the main function when the script is executed directly
 if __name__ == "__main__":
     main()
