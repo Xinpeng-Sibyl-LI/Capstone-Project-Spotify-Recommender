@@ -4,9 +4,10 @@ Welcome to my Spotify ELT Pipeline repository! 🎶
 
 As both a data enthusiast and a daily Spotify listener, I created this project to explore the power of modern data platforms while diving into music analytics. This project showcases how to build a fully automated ELT (Extract, Load, Transform) pipeline using real-time data from the Spotify API, orchestrated with Apache Airflow and powered by Snowflake.
 
+
 ---
 
-### 🔍 Table of Contents 
+## 📑 Table of Contents  
 1. [Overview](#overview)  
 2. [Architecture Diagram](#architecture-diagram)  
 3. [Project Components](#project-components)  
@@ -17,15 +18,20 @@ As both a data enthusiast and a daily Spotify listener, I created this project t
 
 ---
 
-### 🚀 Overview
+## Overview  
 
 This project outlines the design and implementation of a cloud-based ELT pipeline that transforms raw Spotify data into a format ready for recommendation systems and analytical insights. The pipeline consists of multiple stages including data extraction, loading into Snowflake, transformation using SQL, and feature engineering — all automated via Airflow.
 
-!A graph is expected
 
 ---
 
-### 📦 Project Components
+## Architecture Diagram  
+
+![TuneGenie ELT Architecture](docs/img/tunegenie_architecture.png) <!-- Replace with the real PNG path once committed -->
+
+---
+
+## Project Components  
 
 **1. Data Extraction**
 
@@ -60,10 +66,16 @@ Using **Apache Airflow**, the pipeline is scheduled and automated with:
 - Genre & artist clustering
 - Content-based and collaborative recommendation logic
 
+
 ---
 
-### ⚙️ Getting Started
+## Getting Started  
 
-### Prerequisites
+### Prerequisites  
 
 - Python 3.8+
+- Spotify Developer Credentials
+- Snowflake Account
+- Airflow (installed locally or via Docker)
+- Python packages: `requests`, `pandas`, `snowflake-connector-python`, `spotipy`, etc.
+
