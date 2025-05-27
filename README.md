@@ -1,11 +1,12 @@
 # **TuneGenie – Spotify Playlist Recommender & Analyzer** 🎧  
 
-Welcome to **TuneGenie**, a fully-automated **ELT** pipeline that ingests real-time data from the [Spotify Web API](https://developer.spotify.com/documentation/web-api) → lands it in **Snowflake** → models it with **SQL / dbt** → orchestrates every step with **Apache Airflow**.  
-The goal: build reliable music-analytics tables and power playlist & track-recommendation experiments.
+Welcome to my Spotify ELT Pipeline repository! 🎶
+
+As both a data enthusiast and a daily Spotify listener, I created this project to explore the power of modern data platforms while diving into music analytics. This project showcases how to build a fully automated ELT (Extract, Load, Transform) pipeline using real-time data from the Spotify API, orchestrated with Apache Airflow and powered by Snowflake.
 
 ---
 
-## 📑 Table of Contents  
+### 🔍 Table of Contents 
 1. [Overview](#overview)  
 2. [Architecture Diagram](#architecture-diagram)  
 3. [Project Components](#project-components)  
@@ -16,58 +17,53 @@ The goal: build reliable music-analytics tables and power playlist & track-recom
 
 ---
 
-## Overview  
+### 🚀 Overview
 
-> **Why?** I’m a daily Spotify listener & data-stack tinkerer. This repo shows how modern tooling turns raw API JSON into analytics-ready marts and recommendation features—all reproducibly and in the cloud.
+This project outlines the design and implementation of a cloud-based ELT pipeline that transforms raw Spotify data into a format ready for recommendation systems and analytical insights. The pipeline consists of multiple stages including data extraction, loading into Snowflake, transformation using SQL, and feature engineering — all automated via Airflow.
 
-* **Extract** – Python crawler streams track / artist / audio-feature payloads.  
-* **Load** – Snowpipe Streaming (or Kafka Connector) hydrates a `RAW_*` schema in Snowflake.  
-* **Transform** – dbt models build `STG`, `DIM`, and `FCT` layers.  
-* **Orchestrate** – Airflow DAGs schedule everything & handle retries / logging.  
-* **Analyze** – Notebooks & dashboards explore genre trends, audio-feature clusters, and recommend songs.
+!A graph is expected
 
 ---
 
-## Architecture Diagram  
+### 📦 Project Components
 
-![TuneGenie ELT Architecture](docs/img/tunegenie_architecture.png) <!-- Replace with the real PNG path once committed -->
+**1. Data Extraction**
+
+Extract Spotify data using a Python script (`crawl.py`) from:
+
+- Track metadata
+- Audio features
+- Artists & albums
+
+**2. Data Loading (ELT)**
+
+Raw structured data is loaded into **Snowflake**’s **Raw Data Layer**, enabling scalable, cloud-based storage and analysis.
+
+**3. Data Transformation**
+
+Using SQL inside Snowflake, the data is cleaned and enriched:
+
+- Deduplication, null handling
+- Type casting & encoding
+- Feature enrichment (e.g., audio stats, genre behavior)
+
+**4. Workflow Orchestration**
+
+Using **Apache Airflow**, the pipeline is scheduled and automated with:
+
+- Clear DAGs and task dependencies
+- Logging and retry logic
+
+**5. Analytics & Recommendation**
+
+- Playlist trend analysis
+- Genre & artist clustering
+- Content-based and collaborative recommendation logic
 
 ---
 
-## Project Components  
+### ⚙️ Getting Started
 
-| Stage | Folder | Key Files / Tech | What It Does |
-|-------|--------|------------------|--------------|
-| **1. Extract** | [`ingestion/`](ingestion/) | [`crawl.py`](ingestion/crawl.py) → [Spotipy](https://spotipy.readthedocs.io/) | Calls Spotify API for **tracks, artists, audio features** and publishes JSON to Kafka (or local staging). |
-| **2. Load** | [`streaming/`](streaming/) | [`kafka.yaml`](streaming/kafka.yaml), Snowflake Kafka Connector | Streams each message into `RAW_TRACKS`, `RAW_ARTISTS`, … tables. |
-| **3. Transform** | [`dbt/`](dbt/) | [`models/staging/`](dbt/models/staging/), [`models/marts/`](dbt/models/marts/) | Cleans, de-dupes, casts types, enriches features → `dim_artist`, `fct_top_tracks`, etc. |
-| **4. Orchestrate** | [`airflow/`](airflow/) | [`dags/spotify_elt_dag.py`](airflow/dags/spotify_elt_dag.py), [`docker-compose.yaml`](airflow/docker-compose.yaml) | Hourly DAG: `crawl → load monitor → dbt run → dbt test`. |
-| **5. Analytics / Recs** | [`notebooks/`](notebooks/) | `playlist_recommender.ipynb` | K-means on audio vectors, cosine similarity by user taste, etc. |
+### Prerequisites
 
----
-
-## Getting Started  
-
-### Prerequisites  
-
-| Tool | Link | Notes |
-|------|------|-------|
-| **Python 3.10 +** | <https://www.python.org/downloads/> | Local dev & dbt. |
-| **Docker Desktop** | <https://docs.docker.com/desktop/> | Spins up Kafka + Airflow + Connector. |
-| **Spotify Developer App** | <https://developer.spotify.com/dashboard> | Grab `client_id` & `client_secret`. |
-| **Snowflake Account** | <https://signup.snowflake.com/> | Free trial works fine. |
-| **dbt-Snowflake** | <https://docs.getdbt.com/docs/get-started> | Installed inside Airflow image or host venv. |
-
-```bash
-# clone & bootstrap
-git clone https://github.com/<your-user>/tunegenie.git
-cd tunegenie
-
-# copy example env and fill in secrets
-cp .env.example .env
-# edit .env -> SPOTIFY, SNOWFLAKE, KAFKA creds
-
-# build & start streaming + airflow stacks
-docker compose -f streaming/kafka.yaml up -d
-docker compose -f airflow/docker-compose.yaml up -d
-
+- Python 3.8+
