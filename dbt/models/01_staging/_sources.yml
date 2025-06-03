@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: raw          # <schema in Snowflake>
+    database: spotify  # optional if set in profile
+    tables:
+      - name: raw_top_tracks
+        description: "Landing table loaded from Kafka consumer."
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
+      - name: raw_top_artists
+        description: "Landing table loaded from Kafka consumer."
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique

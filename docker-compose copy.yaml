@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [zookeeper]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+
+  airflow-webserver:
+    image: apache/airflow:2.10.5
+    depends_on: [postgres]
+    ports: ["8081:8081"]
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__WEBSERVER__SECRET_KEY: foo
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./kafka:/opt/airflow/kafka
+    command: >
+      bash -c "airflow db init &&
+               airflow users create
+                 --username admin --password admin
+                 --firstname a --lastname b
+                 --role Admin --email admin@example.com &&
+               airflow webserver"
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.5
+    depends_on: [airflow-webserver]
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./kafka:/opt/airflow/kafka
+    command: airflow scheduler
+
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+    volumes:
+      - ./dbt:/usr/app/dbt
+      - ~/.dbt/profiles.yml:/root/.dbt/profiles.yml:ro

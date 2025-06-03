@@ -1,0 +1,15 @@
+version: 2
+models:
+  - name: stg_top_tracks
+    tests:
+      - unique:
+          column_name: track_id
+      - not_null:
+          column_name: track_id
+  - name: mart_artist_summary
+    columns:
+      - name: artist_id
+        tests:
+          - relationships:
+              to: ref('stg_top_artists')
+              field: artist_id
