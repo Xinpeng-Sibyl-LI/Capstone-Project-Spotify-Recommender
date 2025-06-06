@@ -1,19 +1,67 @@
 version: 2
 
 models:
+  # Staging Models
+  - name: stg_top_artists
+    description: "Cleaned, de-duplicated artist rows from raw Spotify data."
+    columns:
+      - name: artist_id
+        description: "Unique identifier for each artist from Spotify API"
+        tests: [unique, not_null]
+      - name: artist_name
+        description: "Display name of the artist"
+        tests: [not_null]
+      - name: artist_popularity
+        description: "Spotify popularity score (0-100, higher is more popular)"
+        tests: 
+          - not_null
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100]
+              quote: false
+      - name: artist_followers
+        description: "Total number of Spotify followers for this artist"
+        tests: [not_null]
+
   - name: stg_top_tracks
-    description: "One row per Spotify track."
+    description: "Cleaned, de-duplicated track rows from raw Spotify data."
     columns:
       - name: track_id
+        description: "Unique identifier for each track from Spotify API"
         tests: [unique, not_null]
+      - name: track_name
+        description: "Display name of the track/song"
+        tests: [not_null]
+      - name: track_popularity
+        description: "Spotify popularity score for this track (0-100)"
+        tests: [not_null]
       - name: artist_id
+        description: "Foreign key reference to the artist who created this track"
         tests:
+          - not_null
           - relationships:
               to: ref('stg_top_artists')
               field: artist_id
+      - name: duration_ms
+        description: "Track length in milliseconds"
+        tests: 
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: duration_ms > 0
 
-  - name: stg_top_artists
-    description: "One row per artist."
+  - name: stg_listening_history
+    description: "Raw listening history parsed from JSON/CSV with data quality checks."
     columns:
-      - name: artist_id
-        tests: [unique, not_null]
+      - name: play_id
+        description: "Unique identifier for each individual play event"
+        tests: [not_null]
+      - name: user_id
+        description: "Anonymized user identifier for the listener"
+        tests: [not_null]
+      - name: play_ts
+        description: "Timestamp when the track was played (timezone-normalized)"
+        tests: [not_null]
+      - name: track_id
+        description: "Foreign key to the track that was played"
+        tests: [not_null]
+      - name: device
+        description: "Device type used for playback (Mobile, Desktop, etc.)"
