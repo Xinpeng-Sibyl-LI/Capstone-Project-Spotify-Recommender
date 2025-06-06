@@ -1,20 +1,50 @@
 version: 2
 
 sources:
-  - name: raw          # <schema in Snowflake>
-    database: spotify  # optional if set in profile
+  - name: raw
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'DBT_SPOTIFY') }}"
+    schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'RAW') }}"
+
     tables:
-      - name: raw_top_tracks
-        description: "Landing table loaded from Kafka consumer."
+      # ──────────────── RAW_TOP_TRACKS ────────────────
+      - name: RAW_TOP_TRACKS  # Changed from raw_top_tracks to match Snowflake
+        description: "Landing table written by the Kafka consumer."
         columns:
-          - name: id
+          - name: ID  # Snowflake columns are often uppercase too
             tests:
               - not_null
-              - unique
-      - name: raw_top_artists
-        description: "Landing table loaded from Kafka consumer."
+              - unique:
+                  severity: warn        # warn because duplicates are expected
+
+      # ──────────────── RAW_TOP_ARTISTS ───────────────
+      - name: RAW_TOP_ARTISTS  # Changed from raw_top_artists to match Snowflake
+        description: "Landing table written by the Kafka consumer."
         columns:
-          - name: id
+          - name: ID  # Snowflake columns are often uppercase too
             tests:
               - not_null
-              - unique
+              - unique:
+                  severity: warn
+
+      # ───────────── RAW_LISTENING_HISTORY ────────────
+      - name: RAW_LISTENING_HISTORY  # Changed from raw_listening_history to match Snowflake
+        description: "Landing table (or streamed sink) for listening-history events."
+        freshness:                                # optional: SLA check
+          warn_after: {count: 24, period: hour}   # warn if no rows < 24 h
+        columns:
+          - name: PLAY_ID  # Assuming Snowflake columns are uppercase
+            description: "UUID for each play record."
+            tests:
+              - not_null
+              - unique:
+                  severity: warn            # multiple ingestions may repeat
+          - name: PLAY_TS
+            description: "Timestamp when the track was played."
+            tests:
+              - not_null
+          - name: USER_ID
+            description: "Listener identifier."
+          - name: TRACK_ID
+            description: "FK → RAW_TOP_TRACKS.ID"
+          - name: ARTIST_ID
+            description: "FK → RAW_TOP_ARTISTS.ID"

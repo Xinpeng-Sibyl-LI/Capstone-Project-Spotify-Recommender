@@ -3,6 +3,7 @@ import os   # OS-level operations (paths, env vars)
 import base64   # For encoding credentials
 from requests import post, get   #To make HTTP requests
 import json    # For working with JSON data
+import pandas as pd
 
 
 # Loadd environment variables from .env.
@@ -70,24 +71,40 @@ def get_top_tracks_for_artists(token, artist_ids):
     return track_data
 
 # Hardcoded list of top US artist names to query
-TOP_US_ARTISTS = [
-    "Drake", "Taylor Swift", "Morgan Wallen", "SZA", "The Weeknd",
-    "Bad Bunny", "Metro Boomin", "Doja Cat", "Luke Combs", "Olivia Rodrigo"
+TOP_ARTISTS = [
+    "Bruno Mars", "The Weeknd", "Lady Gaga", "Billie Eilish", "Rihanna",
+    "Coldplay", "Ed Sheeran", "Kendrick Lamar", "Bad Bunny", "Taylor Swift",
+    "Justin Bieber", "Drake", "Ariana Grande", "David Guetta", "SZA",
+    "Calvin Harris", "Maroon 5", "Post Malone", "Dua Lipa", "Eminem",
+    "J Balvin", "Katy Perry", "Shakira", "Sia", "Travis Scott",
+    "Pitbull", "Sabrina Carpenter", "Kanye West", "Miley Cyrus", "Lana Del Rey",
+    "Beyoncé", "Chris Brown", "Imagine Dragons", "Adele", "Benson Boone",
+    "Daddy Yankee", "Tate McRae", "Arctic Monkeys", "Future", "Karol G",
+    "Doja Cat", "OneRepublic", "Marshmello", "Sam Smith", "Linkin Park",
+    "Black Eyed Peas", "Alex Warren", "Khalid", "Playboi Carti", "Selena Gomez"
 ]
 
 
 # Query Spotify to fetch metadata for the top artists
 def get_top_artists_us(token):
+    """Return a list of dicts—one per artist—now *including* the genres array."""
     headers = get_auth_header(token)
     url = "https://api.spotify.com/v1/search"
     artist_data = []
 
-    for name in TOP_US_ARTISTS:
+    for name in TOP_ARTISTS:
         query = f"?q={name}&type=artist&limit=1"
         res = get(url + query, headers=headers)
         items = json.loads(res.content).get("artists", {}).get("items", [])
         if items:
-            artist_data.append(items[0])    # Add first match to list
+            a = items[0]
+            artist_data.append({
+                "id":         a["id"],
+                "name":       a["name"],
+                "followers":  a["followers"]["total"],
+                "popularity": a["popularity"],
+                "genres":     a["genres"]          ### NEW — now captured                                 ### NEW — keep raw blob if you like
+            })
     return artist_data
 
 # Save JSON data to a file in the /data directory
@@ -106,6 +123,7 @@ def save_to_local_json(data, filename="data/raw_artists_tracks.json"):
 # Main function to control the script workflow
 def main():
     token = get_token()
+
     top_artists = get_top_artists_us(token)
     artist_ids = [artist["id"] for artist in top_artists]
     top_tracks = get_top_tracks_for_artists(token, artist_ids)

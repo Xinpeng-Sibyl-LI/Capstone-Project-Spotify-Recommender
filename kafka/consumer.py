@@ -5,10 +5,10 @@ import json
 import logging
 import os
 from ingestion import load_to_snowflake
-from ingestion.load_to_snowflake import load_data_to_snowflake  # use your existing loader function
+from ingestion.load_to_snowflake import load_spotify_data  # use your existing loader function
 
 KAFKA_CONFIG = {
-    'bootstrap.servers': 'kafka:9092',
+    'bootstrap.servers': 'localhost:9092',
     'group.id': 'spotify-consumer-group',
     'auto.offset.reset': 'earliest'  # or 'latest' if you only want new messages
 }
@@ -35,7 +35,7 @@ def main():
             record = json.loads(msg.value().decode('utf-8'))
 
             # Your Snowflake loader expects a list
-            load_data_to_snowflake([record])
+            load_spotify_data([record])
 
     except KeyboardInterrupt:
         pass

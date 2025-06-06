@@ -1,0 +1,2 @@
+load_from:
+  - python_file: ../orchestration/spotify_job.py

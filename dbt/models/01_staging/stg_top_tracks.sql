@@ -1,21 +1,36 @@
-{{ config(materialized='view') }}
+{{ config(materialized = 'view') }}
 
 with source as (
 
-    select * 
-    from {{ source('raw', 'raw_top_tracks') }}
+    select *
+    from {{ source('raw', 'RAW_TOP_TRACKS') }}  -- Updated table name
 
-), renamed as (
+), cleaned as (
 
     select
-        id                      as track_id,
-        name                    as track_name,
-        popularity              as track_popularity,
-        artist_ids[0]::varchar  as artist_id,     -- first artist in array
-        album ->> 'name'        as album_name,
+        ID::string            as track_id,       -- Updated column name
+        NAME::string          as track_name,     -- Updated column name
+        POPULARITY::number    as track_popularity, -- Updated column name
+        ARTIST_ID::string     as artist_id,      -- Updated column name
+
+        /* album name lives inside json_data column */
+        JSON_DATA:"album":"name"::string as album_name, -- Updated column name
+
+        DURATION_MS::number   as duration_ms,    -- Updated column name
+        EXPLICIT::boolean     as is_explicit,    -- Updated column name
+
         {{ current_timestamp() }} as _loaded_at
     from source
 
+), dedup as (
+
+    select *
+    from cleaned
+    qualify row_number() over (
+        partition by track_id
+        order by _loaded_at desc
+    ) = 1
+
 )
 
-select * from renamed;
+select * from dedup

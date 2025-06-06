@@ -1,29 +1,42 @@
-name: CI
+name: CI Pipeline
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  dbt-ci:
     runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: ./dbt
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
-          pip install dbt-core==1.8.0 dbt-snowflake==1.8.0
-          pip install apache-airflow==2.10.5 airflow-dag-lint pytest
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: dbt deps & build
-        run: |
-          cd dbt
-          dbt deps
-          dbt build --select state:modified+
+      - name: Run dbt debug
+        run: dbt debug --project-dir dbt
 
-      - name: Lint DAGs
-        run: dag-lint dags/
+      - name: Run dbt models
+        run: dbt run --project-dir dbt
 
-      - name: Unit tests (if any)
-        run: pytest -q
+      - name: Run dbt tests
+        run: dbt test --project-dir dbt

@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  # Intermediate Models
+  - name: int_listening_history_enriched
+    description: "Listening history joined with track and artist details for analysis"
+    columns:
+      - name: play_id
+        description: "Unique play event identifier"
+        tests: [unique, not_null]
+      - name: track_id
+        description: "Track identifier with referential integrity to staging"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_top_tracks')
+              field: track_id
+      - name: artist_id
+        description: "Artist identifier with referential integrity to staging"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_top_artists')
+              field: artist_id
+
+  - name: int_tracks_with_artists
+    description: "Denormalized view combining track and artist information"
+    columns:
+      - name: track_id
+        tests: [unique, not_null]
+      - name: artist_id
+        tests: [not_null]
+

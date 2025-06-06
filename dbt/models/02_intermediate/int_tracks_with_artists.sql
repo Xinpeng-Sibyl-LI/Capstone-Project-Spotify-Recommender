@@ -1,5 +1,5 @@
 {{ config(
-    materialized='view'
+    materialized='table'
 ) }}
 
 with stg_top_tracks as (
@@ -41,4 +41,4 @@ final as (
 
 )
 
-select * from final;
+select * from final
