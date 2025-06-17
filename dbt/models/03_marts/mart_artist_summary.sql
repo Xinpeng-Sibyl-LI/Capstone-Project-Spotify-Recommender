@@ -15,7 +15,7 @@ with source as (
         
         -- Track-level aggregations
         avg(track_popularity) as avg_track_popularity,
-        max(track_popularity) as peak_track_popularity,
+        max(track_popularity) as max_track_popularity,
         min(track_popularity) as min_track_popularity,
         count(*) as num_tracks,
         

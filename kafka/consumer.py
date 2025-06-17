@@ -35,7 +35,7 @@ def main():
             record = json.loads(msg.value().decode('utf-8'))
 
             # Your Snowflake loader expects a list
-            load_spotify_data([record])
+            load_spotify_data()
 
     except KeyboardInterrupt:
         pass

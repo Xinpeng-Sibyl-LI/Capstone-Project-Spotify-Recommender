@@ -1,39 +1,50 @@
-{{ config(materialized='table') }}
+{{ config(materialized='ephemeral') }}
 
-with lhist as (
+with listening_history as (
     select * from {{ ref('stg_listening_history') }}
 ),
 
-tracks as (
-    select * from {{ ref('stg_top_tracks') }}
+tracks_with_artists as (
+    select * from {{ ref('int_tracks_with_artists') }}
 ),
 
-artists as (
-    select * from {{ ref('stg_top_artists') }}
-),
-
-joined as (
+enriched as (
     select
+        -- Play event details
         l.play_id,
         l.user_id,
         l.play_ts,
         l.device,
-        l.language,
-        l.play_genres,
-        t.track_id,
+        l.play_duration_seconds,
+        l.skipped,
+        
+        -- Track details
+        l.track_id,
         t.track_name,
         t.track_popularity,
-        t.album_name,
-        t.duration_ms,
+        t.track_language,
+        t.duration_seconds,
         t.is_explicit,
-        a.artist_id,
-        a.artist_name,
-        a.artist_popularity,
-        a.artist_followers,
-        a.artist_genres
-    from lhist l
-    left join tracks t on l.track_id = t.track_id
-    left join artists a on l.artist_id = a.artist_id
+        
+        -- Artist details
+        l.artist_id,
+        t.artist_name,
+        t.artist_popularity,
+        t.artist_followers,
+        t.artist_genres
+        
+    from listening_history l
+    left join tracks_with_artists t on l.track_id = t.track_id
+),
+
+-- Add deduplication for any duplicate play events
+deduped as (
+    select *
+    from enriched
+    qualify row_number() over (
+        partition by play_id 
+        order by play_ts desc
+    ) = 1
 )
 
-select * from joined
+select * from deduped

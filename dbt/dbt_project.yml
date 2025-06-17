@@ -1,12 +1,11 @@
-
 # Name your project! Project names should contain only lowercase characters
 # and underscores. A good package name should reflect your organization's
 # name or the intended use of these models
-name: 'Spotify'
+name: 'spotify'
 version: '1.0.0'
 
 # This setting configures which "profile" dbt uses for this project.
-profile: 'Spotify'
+profile: 'spotify'
 
 flags:
   send_anonymous_usage_stats: false
@@ -27,14 +26,10 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "dbt_packages"
 
 models:
-  Spotify:
+  spotify:
     01_staging:
       +materialized: view
     02_intermediate:
-      +materialized: table
+      +materialized: ephemeral
     03_marts:
       +materialized: table
-
-# seeds:
-#   spotify_project:
-#     +quote_columns: false

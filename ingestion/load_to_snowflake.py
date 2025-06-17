@@ -6,66 +6,74 @@ from dotenv import load_dotenv
 import snowflake.connector as sf
 import pandas as pd
 from snowflake.connector.pandas_tools import write_pandas
-from typing import Sequence
-
 
 # Setup paths and imports
-env_path = Path(__file__).resolve().parents[1] / 'ingestion' / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
-ingestion_path = Path(__file__).resolve().parents[1] / 'ingestion'
-sys.path.append(str(ingestion_path))
-
+# Add current directory to path so we can import crawl
+sys.path.append(os.path.dirname(__file__))
 from crawl import main as crawl_spotify_data
-
 
 def _get_conn():
     return sf.connect(
-        user      = os.getenv("SNOWFLAKE_USER"),
-        password  = os.getenv("SNOWFLAKE_PASSWORD"),
-        account   = os.getenv("SNOWFLAKE_ACCOUNT"),
-        warehouse = os.getenv("SNOWFLAKE_WAREHOUSE"),
-        database  = os.getenv("SNOWFLAKE_DATABASE"),
-        schema    = os.getenv("SNOWFLAKE_SCHEMA"),
+        user=os.getenv("SNOWFLAKE_USER"),
+        password=os.getenv("SNOWFLAKE_PASSWORD"),
+        account=os.getenv("SNOWFLAKE_ACCOUNT"),
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+        database=os.getenv("SNOWFLAKE_DATABASE"),
+        schema=os.getenv("SNOWFLAKE_SCHEMA"),
     )
 
-
-def load_df_to_snowflake(df: pd.DataFrame, table_name: str):
+def load_df_to_snowflake(df: pd.DataFrame, table_name: str, truncate_first=True):
     """Insert DataFrame into Snowflake table."""
     if df.empty:
         print(f"⚠️  {table_name}: No data to load")
         return False
 
+    # Add ingested_at timestamp
+    df_with_timestamp = df.copy()
+    df_with_timestamp['ingested_at'] = pd.Timestamp.now()
+    
+    # Convert column names to uppercase for Snowflake
+    df_with_timestamp.columns = [col.upper() for col in df_with_timestamp.columns]
+
     with _get_conn() as conn:
-        result = write_pandas(
-            conn,
-            df,
-            table_name       = table_name,
-            quote_identifiers= False
-        )
+        try:
+            # Truncate table first if requested (overwrite mode)
+            if truncate_first:
+                cursor = conn.cursor()
+                cursor.execute(f"TRUNCATE TABLE {table_name}")
+                cursor.close()
+                print(f"🗑️  {table_name}: Table truncated")
 
-        success = result[0]
+            result = write_pandas(
+                conn,
+                df_with_timestamp,
+                table_name=table_name,
+                quote_identifiers=False,
+                auto_create_table=False,
+                overwrite=False
+            )
 
-        # Connector 3.13 → (success, nchunks, nrows)           ↴ int
-        # Connector 3.0  → (success, nrows)                    ↴ int
-        # Connector 2.x  → (success, nchunks, put_results[])   ↴ list
-        third = result[-1]
-        nrows = third if isinstance(third, int) else len(df)
+            success = result[0]
+            nrows = result[-1] if isinstance(result[-1], int) else len(df)
 
-        if success:
-            print(f"✅  {table_name}: {nrows:,} rows loaded")
-            return True
-        else:
-            print(f"❌  {table_name}: write_pandas reported failure")
+            if success:
+                print(f"✅  {table_name}: {nrows:,} rows loaded")
+                return True
+            else:
+                print(f"❌  {table_name}: write_pandas reported failure")
+                return False
+                
+        except Exception as e:
+            print(f"❌  {table_name}: Error - {e}")
             return False
-
-
 
 def load_spotify_data():
     """Load Spotify artists and tracks."""
     print("📡 Fetching Spotify data...")
-    data = crawl_spotify_data()
     
+    data = crawl_spotify_data()
     top_artists = data.get('top_artists', [])
     top_tracks = data.get('top_tracks', [])
     
@@ -73,74 +81,105 @@ def load_spotify_data():
         print("❌ No Spotify data retrieved")
         return False
     
+    print(f"📊 Processing {len(top_artists)} artists and {len(top_tracks)} tracks")
+    
     # Process artists
-    artists_df = pd.DataFrame([{
-        'id': a['id'],
-        'name': a['name'],
-        'followers': a['followers'],
-        'popularity': a['popularity'],
-        'genres': json.dumps(a.get('genres', [])),
-        'json_data': json.dumps(a.get('json_data', {}))
-    } for a in top_artists])
+    artists_data = []
+    for a in top_artists:
+        artists_data.append({
+            'id': a.get('id'),
+            'name': a.get('name'),
+            'followers': a.get('followers', 0),
+            'popularity': a.get('popularity', 0),
+            'genres': json.dumps(a.get('genres', [])),
+            'json_data': json.dumps(a)
+        })
+    
+    artists_df = pd.DataFrame(artists_data)
     
     # Process tracks
-    tracks_df = pd.DataFrame([{
-        'id': t['id'],
-        'name': t['name'],
-        'artist_id': t['artists'][0]['id'],
-        'popularity': t['popularity'],
-        'duration_ms': t.get('duration_ms'),
-        'explicit': t.get('explicit', False),
-        'preview_url': t.get('preview_url'),
-        'json_data': json.dumps(t)
-    } for t in top_tracks])
+    tracks_data = []
+    for t in top_tracks:
+        # Get first artist ID safely
+        artist_id = None
+        if t.get('artists') and len(t['artists']) > 0:
+            artist_id = t['artists'][0].get('id')
+            
+        tracks_data.append({
+            'id': t.get('id'),
+            'name': t.get('name'),
+            'artist_id': artist_id,
+            'popularity': t.get('popularity', 0),
+            'duration_ms': t.get('duration_ms'),
+            'explicit': t.get('explicit', False),
+            'track_language': t.get('language', 'und'),
+            'json_data': json.dumps(t)
+        })
     
-    # Load to Snowflake
-    artists_ok = load_df_to_snowflake(artists_df, 'RAW_TOP_ARTISTS')
-    tracks_ok = load_df_to_snowflake(tracks_df, 'RAW_TOP_TRACKS')
+    tracks_df = pd.DataFrame(tracks_data)
+    
+    # Load to Snowflake - always overwrite artists and tracks
+    artists_ok = load_df_to_snowflake(artists_df, 'RAW_TOP_ARTISTS', truncate_first=True)
+    tracks_ok = load_df_to_snowflake(tracks_df, 'RAW_TOP_TRACKS', truncate_first=True)
     
     return artists_ok and tracks_ok
 
-
-def load_listening_history(csv_path="dbt/seeds/seed_listening_history.csv"):
-    """Load fake listening history from CSV."""
-    if not os.path.exists(csv_path):
-        print(f"⚠️  Listening history not found: {csv_path}")
-        print("   Run fake_listening_history.py first")
-        return False
+def load_listening_history():
+    """Generate and load fake listening history."""
+    print("🎭 Generating fake listening history...")
     
-    print("📖 Loading listening history...")
-    df = pd.read_csv(csv_path)
-    return load_df_to_snowflake(df, 'RAW_LISTENING_HISTORY')
-
+    try:
+        from fake_listening_history import generate_fake_listening_history
+        
+        plays_df = generate_fake_listening_history(n_plays=25000)
+        
+        if plays_df.empty:
+            print("❌ No listening history data generated")
+            return False
+        
+        # Load to Snowflake - append mode (no truncate)
+        return load_df_to_snowflake(plays_df, 'RAW_LISTENING_HISTORY', truncate_first=False)
+        
+    except ImportError as e:
+        print(f"❌ Could not import fake_listening_history: {e}")
+        return False
+    except Exception as e:
+        print(f"❌ Error generating listening history: {e}")
+        return False
 
 def main(include_listening_history=True):
     """Load all Spotify data to Snowflake."""
     print("🎵 Starting Spotify data pipeline...")
     
     results = {}
+    
+    # Load Spotify data first
     results['spotify'] = load_spotify_data()
     
-    if include_listening_history:
+    if include_listening_history and results['spotify']:
         results['listening'] = load_listening_history()
+    elif include_listening_history:
+        print("⚠️ Skipping listening history (Spotify data load failed)")
+        results['listening'] = False
     
     # Summary
-    print("\n" + "="*40)
+    print("\n" + "="*50)
     success_count = sum(results.values())
     total_count = len(results)
     
+    print(f"📊 Results:")
+    for dataset, success in results.items():
+        status = "✅" if success else "❌"
+        print(f"  {status} {dataset.title()}: {'Success' if success else 'Failed'}")
+    
     if success_count == total_count:
-        print("🎉 All data loaded successfully!")
+        print("\n🎉 All data loaded successfully!")
     else:
-        print(f"⚠️  {success_count}/{total_count} datasets loaded")
-    print("="*40)
+        print(f"\n⚠️  {success_count}/{total_count} datasets loaded successfully")
+    print("="*50)
     
     return success_count == total_count
 
-
 if __name__ == "__main__":
-    # Load everything
-    main(include_listening_history=True)
-    
-    # Or load only Spotify data
-    # main(include_listening_history=False)
+    success = main(include_listening_history=True)
+    sys.exit(0 if success else 1)
