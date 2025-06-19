@@ -23,8 +23,6 @@ with source as (
         max(track_popularity) - min(track_popularity) as popularity_range,
         stddev(track_popularity) as track_popularity_stddev,
         
-        max(_loaded_at) as last_loaded_at
-        
     from source
     group by 
         artist_id, 
