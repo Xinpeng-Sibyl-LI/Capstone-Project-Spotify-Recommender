@@ -1,7 +1,7 @@
 # Music Streaming Data Model Documentation
 
 ## Overview
-This data model follows a medallion architecture pattern with clear separation of concerns across four distinct layers: Raw, Staging, Intermediate, and Mart. The model is designed to process music streaming data from platforms like Spotify, transforming raw API data and user listening events into business-ready analytics tables.
+A hybrid data modeling approach that combines several established patterns is implemented to this project: following a medallion architecture pattern with clear separation of concerns across four distinct layers: Raw, Staging, Intermediate, and Mart. The model is designed to process music streaming data from platforms like Spotify, transforming raw API data and user listening events into business-ready analytics tables.
 
 ## Architecture Layers
 
