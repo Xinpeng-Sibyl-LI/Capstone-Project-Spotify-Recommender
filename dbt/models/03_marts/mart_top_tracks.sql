@@ -4,7 +4,6 @@ with source as (
 
     select *
     from {{ ref('int_tracks_with_artists') }}
-    where _loaded_at = (select max(_loaded_at) from {{ ref('int_tracks_with_artists') }})
 
 ), ranked as (
 
@@ -20,12 +19,10 @@ with source as (
         track_name,
         artist_id,
         artist_name,
-        album_name,
         track_popularity,
         artist_popularity,
         artist_followers,
         popularity_rank,
-        _loaded_at,
         {{ get_popularity_range('track_popularity') }} as popularity_range, 
         
     from ranked

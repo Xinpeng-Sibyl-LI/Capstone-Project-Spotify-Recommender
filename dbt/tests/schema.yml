@@ -1,9 +1,0 @@
-version: 2
-
-tests:
-  - name: test_valid_daily_play_counts
-    severity: warn       # default is error
-  
-
-
-# If you want the test to warn (but not break CI) when it fails, add to dbt/tests/schema.yml:

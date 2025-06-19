@@ -7,6 +7,7 @@ import pandas as pd
 from faker import Faker
 from dotenv import load_dotenv
 import snowflake.connector as sf
+from datetime import datetime
 
 fake = Faker()
 Faker.seed(42)
@@ -53,13 +54,18 @@ def generate_fake_listening_history(n_plays=25000):
         track_language = track_row.get("TRACK_LANGUAGE")
         if pd.isna(track_language):
             track_language = "und"
-        
+
+        # Generate fake datetime and convert to string format that Snowflake likes
+        fake_datetime = fake.date_time_between(start_date="-60d", end_date="now")
+        play_ts_str = fake_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
         rows.append({
             "play_id": str(uuid.uuid4()),
             "user_id": "xp", 
             "track_id": track_row["TRACK_ID"],
             "artist_id": track_row["ARTIST_ID"],
-            "play_ts": fake.date_time_between(start_date="-60d", end_date="now"),
+
+            "play_ts": play_ts_str,  # Now as string in YYYY-MM-DD HH:MM:SS format
             "track_language": track_language,
             "device": random.choice(DEVICE_POOL),
             "play_duration_seconds": random.randint(30, 300),
