@@ -1,90 +1,111 @@
-"""
-fake_listening_history.py
-----------------------------------
-Writes seed_listening_history.csv with the schema above.
-"""
-
-import csv, uuid, random, os
-from datetime import datetime, timedelta
+import csv
+import uuid
+import random
+import os
+import json
 import pandas as pd
 from faker import Faker
 from dotenv import load_dotenv
 import snowflake.connector as sf
-from load_to_snowflake import load_df_to_snowflake
-from pathlib import Path
-
 
 fake = Faker()
 Faker.seed(42)
 random.seed(42)
+load_dotenv()
 
-load_dotenv()                        # pull your Snowflake creds
+def generate_fake_listening_history(n_plays=25000):
+    # Connect to Snowflake
+    conn = sf.connect(
+        user=os.getenv("SNOWFLAKE_USER"),
+        password=os.getenv("SNOWFLAKE_PASSWORD"),
+        account=os.getenv("SNOWFLAKE_ACCOUNT"),
+        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+        database=os.getenv("SNOWFLAKE_DATABASE"),
+        schema=os.getenv("SNOWFLAKE_SCHEMA", "RAW"),
+    )
+    
+    # Get tracks from Snowflake
+    sql = """
+    SELECT 
+        ID as track_id,
+        ARTIST_ID,
+        TRACK_LANGUAGE
+    FROM RAW_TOP_TRACKS
+    """
+    
+    track_df = pd.read_sql(sql, conn)
+    conn.close()
+    
+    if track_df.empty:
+        print("⚠️ No tracks found")
+        return pd.DataFrame()
+    
+    print(f"📊 Loaded {len(track_df)} tracks from Snowflake")
+    
+    # Generate fake plays
+    DEVICE_POOL = ["Mobile", "Web", "Smart Speaker", "Car"]
+    
+    rows = []
+    for i in range(n_plays):
+        track_row = track_df.sample(1).iloc[0]
+        
+        # Use actual track language or default to 'und'
+        track_language = track_row.get("TRACK_LANGUAGE")
+        if pd.isna(track_language):
+            track_language = "und"
+        
+        rows.append({
+            "play_id": str(uuid.uuid4()),
+            "user_id": "xp", 
+            "track_id": track_row["TRACK_ID"],
+            "artist_id": track_row["ARTIST_ID"],
+            "play_ts": fake.date_time_between(start_date="-60d", end_date="now"),
+            "track_language": track_language,
+            "device": random.choice(DEVICE_POOL),
+            "play_duration_seconds": random.randint(30, 300),
+            "skipped": random.choice([True, False]) if random.random() < 0.3 else False
+        })
+    
+    plays_df = pd.DataFrame(rows)
+    print(f"✅ Generated {len(plays_df):,} listening records")
+    
+    return plays_df
 
-# ─── 1. Pull real track + artist IDs + genres from Snowflake ────────────────
-conn = sf.connect(
-    user=os.getenv("SNOWFLAKE_USER"),
-    password=os.getenv("SNOWFLAKE_PASSWORD"),
-    account=os.getenv("SNOWFLAKE_ACCOUNT"),
-    warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
-    database=os.getenv("SNOWFLAKE_DATABASE"),
-    schema=os.getenv("SNOWFLAKE_SCHEMA", "RAW"),
-)
-sql = """
-SELECT
-    t.id          AS track_id,
-    a.id          AS artist_id,
-    a.genres      AS artist_genres
-FROM raw_top_tracks t
-JOIN raw_top_artists a
-  ON a.id = t.artist_id
-"""
-track_df = pd.read_sql(sql, conn)
-conn.close()
+def save_listening_history_to_csv(plays_df, output_path="data/raw_listening_history.csv"):
+    if plays_df.empty:
+        return False
+        
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Check if file exists to determine if we need headers
+    file_exists = os.path.exists(output_path)
+    
+    # Append mode if file exists, write mode if new file
+    mode = 'a' if file_exists else 'w'
+    header = not file_exists  # Only write header if file doesn't exist
+    
+    plays_df.to_csv(output_path, index=False, mode=mode, header=header, quoting=csv.QUOTE_MINIMAL)
+    
+    action = "Appended" if file_exists else "Saved"
+    print(f"💾 {action} {len(plays_df):,} records to {output_path}")
+    return True
 
-# ─── 2. Build fake plays ────────────────────────────────────────────────────
-N_PLAYS = 25_000
-DEVICE_POOL = ["Mobile", "Web", "Smart Speaker", "Car"]
-LANG_POOL   = ["en", "es", "fr", "de", "pt", "it"]
+def main():
+    plays_df = generate_fake_listening_history(n_plays=250)
+    
+    if not plays_df.empty:
+        save_listening_history_to_csv(plays_df)
+        return plays_df
+    
+    return pd.DataFrame()
 
-user_id = str(uuid.uuid4())          # single listener; change if you want many
-rows = []
-
-for _ in range(N_PLAYS):
-    track_row = track_df.sample(1).iloc[0]
-
-    # ── robust genres guard ───────────────────────────────────────────────
-    genres_raw = track_row["ARTIST_GENRES"]
-
-    if pd.isna(genres_raw):                          # None / NaN
-        genres_list = []
-    elif isinstance(genres_raw, list):               # already a list
-        genres_list = genres_raw
-    else:                                            # string like '["pop","rock"]'
+if __name__ == "__main__":
+    df = main()
+    
+    # Optional: load directly to Snowflake
+    if not df.empty:
         try:
-            genres_list = json.loads(genres_raw)
-        except Exception:
-            genres_list = []
-
-    # ── build the row; now use genres_list (safe) ─────────────────────────
-    rows.append({
-        "play_id":   str(uuid.uuid4()),
-        "user_id":   "xp",
-        "track_id":  track_row["TRACK_ID"],
-        "artist_id": track_row["ARTIST_ID"],
-        "play_ts":   fake.date_time_between(start_date="-60d", end_date="now"),
-        "genres":    random.sample(genres_list, k=min(2, len(genres_list)))
-                     if genres_list else [],      # ← genres_list, not raw column
-        "language":  random.choice(LANG_POOL),
-        "device":    random.choice(DEVICE_POOL),
-    })
-
-plays_df = pd.DataFrame(rows)
-
-# ─── 3. Save to a seed file ────────────────────────────────────────────────
-out_path = "dbt/seeds/seed_listening_history.csv"
-os.makedirs(os.path.dirname(out_path), exist_ok=True)
-plays_df.to_csv(out_path, index=False, quoting=csv.QUOTE_MINIMAL)
-print(f"✅ wrote {len(plays_df):,} fake plays → {out_path}")
-
-# Push the DataFrame straight to Snowflake
-load_df_to_snowflake(plays_df, "RAW_LISTENING_HISTORY") 
+            from load_to_snowflake import load_df_to_snowflake
+            load_df_to_snowflake(df, "RAW_LISTENING_HISTORY")
+        except ImportError:
+            print("ℹ️ Skipping direct Snowflake load")

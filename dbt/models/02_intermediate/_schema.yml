@@ -2,32 +2,108 @@ version: 2
 
 models:
   # Intermediate Models
+  - name: int_tracks_with_artists
+    description: "Denormalized view combining track and artist information with deduplication"
+    columns:
+      - name: track_id
+        description: "Unique track identifier"
+        tests:
+          - unique
+          - not_null
+      - name: track_name
+        description: "Track display name"
+        tests:
+          - not_null
+      - name: track_popularity
+        description: "Spotify track popularity score (0-100)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: track_language
+        description: "Detected language of track"
+      - name: duration_seconds
+        description: "Track duration in seconds"
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "duration_seconds > 0"
+      - name: is_explicit
+        description: "Whether track contains explicit content"
+      - name: artist_id
+        description: "Artist identifier"
+        tests:
+          - not_null
+      - name: artist_name
+        description: "Artist display name"
+        tests:
+          - not_null
+      - name: artist_popularity
+        description: "Spotify artist popularity score (0-100)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: artist_followers
+        description: "Total Spotify followers for artist"
+      - name: artist_genres
+        description: "Artist genres as JSON array"
+
   - name: int_listening_history_enriched
-    description: "Listening history joined with track and artist details for analysis"
+    description: "Listening history enriched with track and artist details"
     columns:
       - name: play_id
         description: "Unique play event identifier"
-        tests: [unique, not_null]
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: "User identifier"
+        tests:
+          - not_null
+      - name: play_ts
+        description: "When the track was played"
+        tests:
+          - not_null
+      - name: device
+        description: "Device used for playback"
+      - name: play_duration_seconds
+        description: "How long the track was played"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "play_duration_seconds >= 0"
+      - name: skipped
+        description: "Whether the track was skipped"
       - name: track_id
-        description: "Track identifier with referential integrity to staging"
+        description: "Track identifier with referential integrity"
         tests:
           - not_null
           - relationships:
-              to: ref('stg_top_tracks')
+              to: ref('int_tracks_with_artists')
               field: track_id
+      - name: track_name
+        description: "Name of played track"
+      - name: track_popularity
+        description: "Popularity score of played track"
+      - name: track_language
+        description: "Language of played track"
+      - name: duration_seconds
+        description: "Duration of played track in seconds"
+      - name: is_explicit
+        description: "Whether played track is explicit"
       - name: artist_id
-        description: "Artist identifier with referential integrity to staging"
+        description: "Artist identifier with referential integrity"
         tests:
           - not_null
           - relationships:
-              to: ref('stg_top_artists')
+              to: ref('int_tracks_with_artists')
               field: artist_id
-
-  - name: int_tracks_with_artists
-    description: "Denormalized view combining track and artist information"
-    columns:
-      - name: track_id
-        tests: [unique, not_null]
-      - name: artist_id
-        tests: [not_null]
-
+      - name: artist_name
+        description: "Name of artist for played track"
+      - name: artist_popularity
+        description: "Popularity score of artist"
+      - name: artist_followers
+        description: "Follower count of artist"
+      - name: artist_genres
+        description: "Genres associated with artist"

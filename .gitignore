@@ -172,3 +172,21 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Data/output
+*.csv
+*.log
+*.db
+.DS_Store
+
+# VS Code settings
+.vscode/
+
+# dbt artifacts
+dbt_packages
