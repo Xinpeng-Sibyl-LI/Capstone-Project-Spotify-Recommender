@@ -34,7 +34,7 @@ def load_df_to_snowflake(df: pd.DataFrame, table_name: str, truncate_first=True)
     # Add ingested_at timestamp as string in format Snowflake expects
     df_with_timestamp = df.copy()
     df_with_timestamp['ingested_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
+
     # Convert column names to uppercase for Snowflake
     df_with_timestamp.columns = [col.upper() for col in df_with_timestamp.columns]
 
@@ -132,6 +132,7 @@ def load_listening_history():
     try:
         from fake_listening_history import generate_fake_listening_history
         
+
         plays_df = generate_fake_listening_history(n_plays=250)
         
         if plays_df.empty:
