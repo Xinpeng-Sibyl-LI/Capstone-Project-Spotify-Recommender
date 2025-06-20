@@ -37,17 +37,17 @@ This project outlines the design and implementation of a cloud-based ELT pipelin
 
 Extract Spotify data using a Python script (`crawl.py`) from:
 
+- Artists metadata
 - Track metadata
-- Audio features
-- Artists & albums
+- Synthetic data of listening history
 
-**2. Data Loading (ELT)**
+**2. Data Loading**
 
 Raw structured data is loaded into **Snowflake**’s **Raw Data Layer**, enabling scalable, cloud-based storage and analysis.
 
 **3. Data Transformation**
 
-Using SQL inside Snowflake, the data is cleaned and enriched:
+Using dbt Core, the data is cleaned and enriched:
 
 - Deduplication, null handling
 - Type casting & encoding
@@ -55,7 +55,7 @@ Using SQL inside Snowflake, the data is cleaned and enriched:
 
 **4. Workflow Orchestration**
 
-Using **Apache Airflow**, the pipeline is scheduled and automated with:
+Using **Apache Airflow** (dbt Cloud for current stage), the pipeline is scheduled and automated with:
 
 - Clear DAGs and task dependencies
 - Logging and retry logic
