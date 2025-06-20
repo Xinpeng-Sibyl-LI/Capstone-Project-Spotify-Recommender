@@ -190,3 +190,5 @@ __pycache__/
 
 # dbt artifacts
 dbt_packages
+
+image

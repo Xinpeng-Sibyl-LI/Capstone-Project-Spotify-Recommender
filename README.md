@@ -27,7 +27,7 @@ This project outlines the design and implementation of a cloud-based ELT pipelin
 
 ## Architecture Diagram  
 
-![TuneGenie ELT Architecture](docs/img/tunegenie_architecture.png) <!-- Replace with the real PNG path once committed -->
+![TuneGenie ELT Architecture](image/pipeline_graph.jpg) <!-- Replace with the real PNG path once committed -->
 
 ---
 
@@ -78,5 +78,3 @@ Using **Apache Airflow**, the pipeline is scheduled and automated with:
 - Snowflake Account
 - Airflow (installed locally or via Docker)
 - Python packages: `requests`, `pandas`, `snowflake-connector-python`, `spotipy`, etc.
-
-tada
