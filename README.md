@@ -27,7 +27,7 @@ This project outlines the design and implementation of a cloud-based ELT pipelin
 
 ## Architecture Diagram  
 
-![TuneGenie ELT Architecture](image/pipeline_graph.jpg) <!-- Replace with the real PNG path once committed -->
+![TuneGenie ELT Architecture](image/pipeline_graph.jpg)
 
 ---
 
