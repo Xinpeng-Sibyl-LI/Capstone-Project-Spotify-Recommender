@@ -40,6 +40,41 @@ def load_df_to_snowflake(df: pd.DataFrame, table_name: str, truncate_first=True)
 
     with _get_conn() as conn:
         try:
+            # Debug: Show current database and schema context
+            cursor = conn.cursor()
+            cursor.execute("SELECT CURRENT_DATABASE(), CURRENT_SCHEMA()")
+            db_info = cursor.fetchone()
+            print(f"🔍 Current context: Database={db_info[0]}, Schema={db_info[1]}")
+            
+            # Get the actual column order from Snowflake table with full qualification
+            full_table_name = f"{db_info[0]}.{db_info[1]}.{table_name}"
+            print(f"🔍 Describing table: {full_table_name}")
+            
+            cursor.execute(f"DESC TABLE {full_table_name}")
+            desc_results = cursor.fetchall()
+            snowflake_columns = [row[0] for row in desc_results]
+            
+            # Show full DESC TABLE results for debugging
+            print(f"🔍 Full DESC TABLE results:")
+            for row in desc_results:
+                print(f"    {row[0]} - {row[1]} - {row[2]}")
+            
+            cursor.close()
+            
+            print(f"🔍 {table_name}: Snowflake columns: {snowflake_columns}")
+            print(f"🔍 {table_name}: DataFrame columns: {list(df_with_timestamp.columns)}")
+            
+            # Check if all DataFrame columns exist in Snowflake table
+            missing_columns = set(df_with_timestamp.columns) - set(snowflake_columns)
+            if missing_columns:
+                print(f"⚠️  {table_name}: Missing columns in Snowflake: {missing_columns}")
+            
+            # Reorder DataFrame columns to match Snowflake table (only include existing columns)
+            existing_columns = [col for col in snowflake_columns if col in df_with_timestamp.columns]
+            df_reordered = df_with_timestamp.reindex(columns=existing_columns)
+            
+            print(f"🔄 {table_name}: Reordered DataFrame columns: {list(df_reordered.columns)}")
+            
             # Truncate table first if requested (overwrite mode)
             if truncate_first:
                 cursor = conn.cursor()
@@ -49,7 +84,7 @@ def load_df_to_snowflake(df: pd.DataFrame, table_name: str, truncate_first=True)
 
             result = write_pandas(
                 conn,
-                df_with_timestamp,
+                df_reordered,  # Use reordered DataFrame
                 table_name=table_name,
                 quote_identifiers=False,
                 auto_create_table=False,
