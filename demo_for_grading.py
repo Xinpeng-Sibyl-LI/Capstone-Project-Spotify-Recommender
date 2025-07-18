@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(__file__))
 
-from ai_chatbot.chatbot import query_hybrid
+from ai_chatbot.chatbot_old import query_hybrid
 from ai_chatbot.utils import memory_utils as mem
 from realtime_simulator import RealTimeListeningSimulator
 

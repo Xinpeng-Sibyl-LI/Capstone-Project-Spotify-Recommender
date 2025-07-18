@@ -3,7 +3,7 @@
 Test script to verify all chatbot components are working
 """
 
-from ..chatbot import SpotifyAnalyticsChatbot  # Changed import
+from ..chatbot_old import SpotifyAnalyticsChatbot  # Changed import
 from ..utils import test_connection  # Changed import
 from ..tools import get_all_tools  # Changed import
 import logging
