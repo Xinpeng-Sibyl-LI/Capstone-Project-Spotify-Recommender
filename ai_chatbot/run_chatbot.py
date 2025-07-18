@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.markdown import Markdown
 from rich.prompt import Prompt
-from .chatbot import SpotifyAnalyticsChatbot  # Changed from 'from ai_chatbot import'
+from .chatbot_old import SpotifyAnalyticsChatbot  # Changed from 'from ai_chatbot import'
 from .utils import test_connection  # Changed import
 import logging
 
