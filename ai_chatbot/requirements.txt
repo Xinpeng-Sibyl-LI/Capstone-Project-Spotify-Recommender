@@ -1,0 +1,32 @@
+# Core dependencies
+openai>=1.0.0
+python-dotenv>=0.19.0
+pandas>=1.5.0
+snowflake-connector-python>=3.0.0
+faker>=18.0.0
+
+# Database and data processing
+snowflake-sqlalchemy>=1.4.0
+sqlalchemy>=1.4.0
+
+# For PDF processing (optional)
+PyPDF2>=3.0.0
+langchain-community>=0.0.1
+langchain>=0.1.0
+faiss-cpu>=1.7.0
+langchain-huggingface>=0.0.1
+
+# For vector search (optional - if you want to use Pinecone)
+pinecone-client>=2.0.0
+
+# Language detection
+langdetect>=1.0.9
+
+# Spotify API
+requests>=2.28.0
+
+# Utilities
+uuid
+json
+datetime
+logging
