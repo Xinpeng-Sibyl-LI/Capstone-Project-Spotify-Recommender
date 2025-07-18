@@ -13,7 +13,7 @@ jobs:
     continue-on-error: true
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -23,10 +23,16 @@ jobs:
       - name: Install Black
         run: pip install black
         
-      - name: Run Black on selected paths
-        run: black --check --diff --verbose utils/rag_utils.py
+      - name: Run Black check
+        run: |
+          if find . -name "*.py" -type f | head -1 | grep -q .; then
+            black --check --diff .
+          else
+            echo "No Python files found to check"
+          fi
 
   dbt-test:
+    name: dbt test
     runs-on: ubuntu-latest
     env:
       DBT_PROFILES_YML: ${{ secrets.DBT_PROFILES_YML }}
@@ -48,7 +54,8 @@ jobs:
           mkdir -p ~/.dbt
           echo "$DBT_PROFILES_YML" > ~/.dbt/profiles.yml
 
+      - name: Run dbt debug
+        run: dbt debug --project-dir cap2_stock
+
       - name: Run dbt tests
-        run: |
-          dbt run --project-dir cap2_stock --target dev
-          dbt test --project-dir cap2_stock --target dev --select 02_int
+        run: dbt test --project-dir cap2_stock
