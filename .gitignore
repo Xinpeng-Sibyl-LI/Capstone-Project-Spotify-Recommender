@@ -190,3 +190,9 @@ __pycache__/
 
 # dbt artifacts
 dbt_packages
+
+# ai_chatbot
+memory/
+debug_imports.py
+test_hybrid_import.py
+embeddings/
