@@ -1,11 +1,9 @@
 name: CI Pipeline
-
 on:
   # push:
   #   branches: [ main ]
   pull_request:
     branches: [ main ]
-
 jobs:
   lint:
     name: Black Lint Check
@@ -16,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           
@@ -30,32 +28,29 @@ jobs:
           else
             echo "No Python files found to check"
           fi
-
   dbt-test:
     name: dbt test
     runs-on: ubuntu-latest
     env:
       DBT_PROFILES_YML: ${{ secrets.DBT_PROFILES_YML }}
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Install dbt
         run: pip install dbt-snowflake
-
       - name: Set up dbt profile
         run: |
           mkdir -p ~/.dbt
           echo "$DBT_PROFILES_YML" > ~/.dbt/profiles.yml
-
+      - name: Install dbt dependencies
+        run: dbt deps --project-dir dbt
       - name: Run dbt debug
-        run: dbt debug --project-dir cap2_stock
-
+        run: dbt debug --project-dir dbt
+      - name: Run dbt compile
+        run: dbt compile --project-dir dbt
       - name: Run dbt tests
-        run: dbt test --project-dir cap2_stock
+        run: dbt test --project-dir dbt
