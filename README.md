@@ -9,6 +9,7 @@ This project demonstrates a fully automated, cloud-based ELT pipeline that inges
 
 ---
 
+
 ## 📑 Table of Contents  
 1. [Architecture Diagram](#architecture-diagram)  
 2. [Project Components](#project-components)  
