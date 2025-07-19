@@ -7,6 +7,7 @@ As both a data enthusiast and a daily Spotify listener, I created this project t
 
 ---
 
+
 ## 📑 Table of Contents  
 1. [Overview](#overview)  
 2. [Architecture Diagram](#architecture-diagram)  
